@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment / secrets
+.env
+
+# Keep the data/ folders but ignore large/regenerable raw files if you prefer.
+# For this portfolio project we KEEP the raw data so reviewers can run it,
+# so nothing under data/ is ignored here.
