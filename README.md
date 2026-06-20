@@ -21,8 +21,8 @@ CSV + API  ->  Extract  ->  Transform + Validate  ->  Load (PostgreSQL)
 | Level | Stage | Status |
 |-------|-------|--------|
 | 1 | Extract (CSV + Fake Store API -> `data/raw/`) | ✅ done (`v1.0.0`) |
-| 2 | Transform & validate | ⏳ |
-| 3 | Load into PostgreSQL | ⏳ |
+| 2 | Transform, validate & load into PostgreSQL + metadata logging | ✅ done (`v2.0.0`) |
+| 3 | Analytics SQL queries / views | ⏳ |
 | 4 | Orchestrate with Airflow | ⏳ |
 | 5 | CI/CD with GitHub Actions | ⏳ |
 | 6 | Dashboard & polish | ⏳ |
