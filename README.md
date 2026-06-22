@@ -24,6 +24,7 @@ CSV + API  ->  Extract  ->  Transform + Validate  ->  Load (PostgreSQL)
 | 2 | ETL: transform, validate & load into PostgreSQL + metadata logging | ✅ done (`v2.0.0`) |
 | 3 | ELT: load raw to Postgres, then transform + build KPI tables in SQL | ✅ done (`v3.0.0`) |
 | 4 | Orchestration: Airflow DAG runs extract→transform→validate→load @daily | ✅ done (`v4.0.0`) |
+| 5 | CI/CD: GitHub Actions runs pytest on every push | ✅ done (`v5.0.0`) |
 | 4 | Orchestrate with Airflow | ⏳ |
 | 5 | CI/CD with GitHub Actions | ⏳ |
 | 6 | Dashboard & polish | ⏳ |
