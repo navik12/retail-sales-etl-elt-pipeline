@@ -6,6 +6,20 @@ runs with Airflow, and test everything with GitHub Actions CI/CD.
 
 Built level-by-level as a portfolio piece for Data Analyst / Data Engineer roles.
 
+## Interview pitch (the 30-second version)
+
+> I built an end-to-end retail sales analytics pipeline. It ingests data from a
+> CSV and a REST API, cleans and validates it in Python (pandas), and loads it
+> into PostgreSQL — implemented both as **ETL** (transform-then-load) and **ELT**
+> (load-then-transform in SQL). Apache **Airflow** orchestrates the four stages
+> on a daily schedule, and every run is logged to a metadata table for
+> observability. The whole thing is covered by **GitHub Actions CI/CD**: pytest
+> runs on every push, and on success a **Docker image** of the pipeline is built
+> and published to the GitHub Container Registry. Finally, a **Metabase**
+> dashboard sits on top of Postgres surfacing the KPIs — total revenue, revenue
+> by product, sales by category and region, and the monthly trend. It's free,
+> reproducible, and runs identically on any machine via the container.
+
 ## Architecture (final goal)
 
 ```
@@ -27,7 +41,7 @@ CSV + API  ->  Extract  ->  Transform + Validate  ->  Load (PostgreSQL)
 | 3 | ELT: load raw to Postgres, then transform + build KPI tables in SQL | ✅ done (`v3.0.0`) |
 | 4 | Orchestration: Airflow DAG runs extract→transform→validate→load @daily | ✅ done (`v4.0.0`) |
 | 5 | CI/CD: GitHub Actions runs pytest, then builds & publishes a Docker image | ✅ done (`v5.0.0`) |
-| 6 | Dashboard & polish | ⏳ |
+| 6 | Dashboard: Metabase on Postgres with revenue/product/region/category/trend KPIs | ✅ done (`v6.0.0`) |
 
 ## Data sources
 
@@ -113,3 +127,46 @@ docker run --rm ghcr.io/navik12/retail-sales-etl-elt-pipeline:latest
 
 (The container still needs a database to connect to via environment variables —
 the image just packages the code and dependencies.)
+
+## Level 6 — Dashboard (Metabase)
+
+The KPIs are visualized in **Metabase**, a free open-source BI tool that connects
+directly to PostgreSQL. (Power BI Desktop is Windows-only; Metabase is the
+cross-platform, free equivalent and runs in a container.)
+
+![Retail Sales Analytics dashboard](docs/dashboard.png)
+
+The dashboard surfaces five KPIs, all live from the `sales` table:
+
+- **Total revenue** — headline number (~$2.3M across 9,994 orders)
+- **Revenue by product** — which products sell the most
+- **Sales by region** — West / East / Central / South
+- **Sales by category** — Furniture / Office Supplies / Technology
+- **Monthly revenue trend** — revenue over time
+
+The underlying SQL for each KPI is in [`sql/kpis.sql`](sql/kpis.sql).
+
+### Run the dashboard locally
+
+Metabase and Postgres both run as containers on a shared Docker network:
+
+```bash
+# 1. a network so the containers can talk by name
+docker network create retail-net
+
+# 2. Postgres (the pipeline loads data here)
+docker run -d --name retail-db --network retail-net \
+  -e POSTGRES_USER=navya -e POSTGRES_PASSWORD=secret -e POSTGRES_DB=retail \
+  postgres:16
+
+# 3. load data by running the pipeline image against it
+docker run --rm --network retail-net \
+  -e PGHOST=retail-db -e PGUSER=navya -e PGPASSWORD=secret -e PGDATABASE=retail \
+  ghcr.io/navik12/retail-sales-etl-elt-pipeline:latest
+
+# 4. Metabase (the dashboard UI) -> open http://localhost:3000
+docker run -d --name metabase --network retail-net -p 3000:3000 metabase/metabase
+
+# In Metabase, add the database with Host = retail-db (NOT localhost), port 5432,
+# db retail, user navya. Then build the KPI questions from sql/kpis.sql.
+```
