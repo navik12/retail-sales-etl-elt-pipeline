@@ -41,9 +41,16 @@ def transform_sales(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=KEY_COLUMNS)
     dropped = before - len(df)
 
-    # 4. Derived columns.
+    # 3b. Drop rows where quantity is 0 (or negative): we can't compute a
+    #     unit_price from them (sales / 0 is undefined -> would give inf).
+    before_qty = len(df)
+    df = df[df["quantity"] > 0]
+    dropped_qty = before_qty - len(df)
+
+    # 4. Derived columns. (quantity is now guaranteed > 0, so this is safe.)
     df["unit_price"] = (df["sales"] / df["quantity"]).round(2)
     df["revenue"] = df["sales"].round(2)
 
-    print(f"Transform: {len(df):,} clean rows ({dropped} dropped for missing keys)")
+    print(f"Transform: {len(df):,} clean rows "
+          f"({dropped} dropped for missing keys, {dropped_qty} dropped for quantity<=0)")
     return df

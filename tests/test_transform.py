@@ -8,6 +8,7 @@ database needed, so the tests are fast and run anywhere.
 Run them locally with:   pytest -v
 """
 
+import numpy as np
 import pandas as pd
 
 from src.transform import transform_sales
@@ -54,3 +55,13 @@ def test_rows_missing_key_fields_are_dropped():
     # that row should be dropped -> 2 rows left instead of 3
     assert len(out) == 2
     assert out["sales"].notna().all()
+
+
+def test_zero_quantity_rows_are_dropped():
+    raw = _raw_sample()
+    raw.loc[1, "Quantity"] = 0   # divide-by-zero would happen on this row
+    out = transform_sales(raw)
+    # that row should be dropped -> 2 rows left instead of 3
+    assert len(out) == 2
+    # and no unit_price should be infinite (proof the guard worked)
+    assert np.isfinite(out["unit_price"]).all()
