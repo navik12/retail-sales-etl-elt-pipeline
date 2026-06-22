@@ -6,30 +6,45 @@ runs with Airflow, and test everything with GitHub Actions CI/CD.
 
 Built level-by-level as a portfolio piece for Data Analyst / Data Engineer roles.
 
-## Interview pitch (the 30-second version)
+## Architecture
 
-> I built an end-to-end retail sales analytics pipeline. It ingests data from a
-> CSV and a REST API, cleans and validates it in Python (pandas), and loads it
-> into PostgreSQL — implemented both as **ETL** (transform-then-load) and **ELT**
-> (load-then-transform in SQL). Apache **Airflow** orchestrates the four stages
-> on a daily schedule, and every run is logged to a metadata table for
-> observability. The whole thing is covered by **GitHub Actions CI/CD**: pytest
-> runs on every push, and on success a **Docker image** of the pipeline is built
-> and published to the GitHub Container Registry. Finally, a **Metabase**
-> dashboard sits on top of Postgres surfacing the KPIs — total revenue, revenue
-> by product, sales by category and region, and the monthly trend. It's free,
-> reproducible, and runs identically on any machine via the container.
+```mermaid
+flowchart LR
+    %% data sources
+    CSV[("📄 Superstore CSV")]:::src
+    API[("🌐 Fake Store API")]:::src
 
-## Architecture (final goal)
+    %% pipeline
+    subgraph PIPE["⚙️ ETL / ELT Pipeline · Python + pandas"]
+        direction LR
+        E["Extract"]:::step --> T["Transform"]:::step --> V["Validate"]:::step --> L["Load"]:::step
+    end
 
-```
-CSV + API  ->  Extract  ->  Transform + Validate  ->  Load (PostgreSQL)
-                                                          |
-                              Airflow (schedule) ---------+
-                              GitHub Actions:
-                                CI  -> pytest on every push
-                                CD  -> build & publish Docker image (ghcr.io)
-                              Dashboard (KPIs)
+    %% storage + bi
+    DB[("🐘 PostgreSQL")]:::store
+    BI["📊 Metabase Dashboard<br/>revenue · products · region · category · trend"]:::bi
+
+    CSV --> E
+    API --> E
+    L --> DB --> BI
+
+    %% orchestration
+    AF["⏰ Airflow DAG · @daily"]:::orch
+    AF -. schedules .-> PIPE
+
+    %% ci/cd
+    subgraph CICD["🔁 GitHub Actions CI/CD"]
+        direction LR
+        CI["CI · pytest"]:::ci --> CD["CD · build image<br/>push → ghcr.io"]:::ci
+    end
+    PIPE -. every push .-> CICD
+
+    classDef src   fill:#e3f2fd,stroke:#1976d2,color:#0d47a1;
+    classDef step  fill:#fff3e0,stroke:#f57c00,color:#e65100;
+    classDef store fill:#e8f5e9,stroke:#388e3c,color:#1b5e20;
+    classDef bi    fill:#f3e5f5,stroke:#7b1fa2,color:#4a148c;
+    classDef orch  fill:#ede7f6,stroke:#512da8,color:#311b92;
+    classDef ci    fill:#eceff1,stroke:#455a64,color:#263238;
 ```
 
 ## Build levels
