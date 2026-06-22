@@ -29,3 +29,39 @@ jobs:
       # 4. Run the tests. If any test fails, the whole workflow fails (red X).
       - name: Run tests
         run: pytest -v
+
+  # ----------------------------------------------------------------------------
+  # CD — Continuous Deployment.
+  # Build a Docker image of the pipeline and publish it to GitHub's Container
+  # Registry (ghcr.io). This job only runs if the `test` job above passed, and
+  # only on pushes to main (not on pull requests).
+  # ----------------------------------------------------------------------------
+  deploy:
+    needs: test                                    # wait for tests; skip if they fail
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write                              # allow pushing the image
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+
+      # Log in to GitHub's Container Registry using the built-in token
+      # (no secrets to set up — GitHub provides GITHUB_TOKEN automatically).
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build the Docker image from our Dockerfile and push it to the registry,
+      # tagged as :latest. The repo name is lowercased as the registry requires.
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
