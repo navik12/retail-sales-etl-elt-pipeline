@@ -65,6 +65,43 @@ python3 src/extract.py
 Loads the Superstore CSV and pulls the Fake Store API, landing both in
 `data/raw/`.
 
+## Level 2 — ETL (transform in Python, then load)
+
+```bash
+python3 run_etl.py
+```
+
+The classic **ETL** order — clean the data *before* it touches the database:
+
+1. **Extract** the raw CSV (`src/extract.py`)
+2. **Transform** in pandas (`src/transform.py`) — snake_case columns, parse dates,
+   drop rows missing key fields or with `quantity <= 0`, add `unit_price` & `revenue`
+3. **Validate** the clean data (`src/validation/`) — row counts, key columns not
+   null, `row_id` unique
+4. **Load** into PostgreSQL with `to_sql` (`src/load.py`)
+
+Every run is recorded in a `pipeline_logs` table (`src/metadata_logger.py`) with
+status, row count, and duration — basic pipeline observability.
+
+## Level 3 — ELT (load raw, then transform in SQL)
+
+```bash
+python3 run_elt.py
+```
+
+Same data, opposite philosophy. **ELT** loads the raw data first, then cleans and
+builds KPI tables *inside* the database using SQL:
+
+1. **Extract + Load raw** into `raw_sales` / `raw_products` — no cleaning
+   (`src/extract_load.py`)
+2. **Transform in SQL** by running `sql/transform.sql`, which builds a
+   `clean_sales` table plus KPI tables, all in Postgres
+
+ETL cleans in Python before loading; ELT loads raw and cleans in SQL. Building
+both shows you understand the trade-off (ELT pushes the heavy work onto the
+database and keeps the raw data around; ETL keeps logic in code and only stores
+clean data).
+
 ## Level 4 — Airflow (orchestration)
 
 Airflow runs in its **own separate virtualenv** (its dependencies conflict with
