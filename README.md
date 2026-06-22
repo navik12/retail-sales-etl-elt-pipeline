@@ -12,7 +12,9 @@ Built level-by-level as a portfolio piece for Data Analyst / Data Engineer roles
 CSV + API  ->  Extract  ->  Transform + Validate  ->  Load (PostgreSQL)
                                                           |
                               Airflow (schedule) ---------+
-                              GitHub Actions (CI/CD tests)
+                              GitHub Actions:
+                                CI  -> pytest on every push
+                                CD  -> build & publish Docker image (ghcr.io)
                               Dashboard (KPIs)
 ```
 
@@ -24,9 +26,7 @@ CSV + API  ->  Extract  ->  Transform + Validate  ->  Load (PostgreSQL)
 | 2 | ETL: transform, validate & load into PostgreSQL + metadata logging | ✅ done (`v2.0.0`) |
 | 3 | ELT: load raw to Postgres, then transform + build KPI tables in SQL | ✅ done (`v3.0.0`) |
 | 4 | Orchestration: Airflow DAG runs extract→transform→validate→load @daily | ✅ done (`v4.0.0`) |
-| 5 | CI/CD: GitHub Actions runs pytest on every push | ✅ done (`v5.0.0`) |
-| 4 | Orchestrate with Airflow | ⏳ |
-| 5 | CI/CD with GitHub Actions | ⏳ |
+| 5 | CI/CD: GitHub Actions runs pytest, then builds & publishes a Docker image | ✅ done (`v5.0.0`) |
 | 6 | Dashboard & polish | ⏳ |
 
 ## Data sources
@@ -78,3 +78,38 @@ airflow standalone
 ```
 
 Then open http://localhost:8080, un-pause `retail_sales_etl`, and trigger it.
+
+## Level 5 — CI/CD (GitHub Actions)
+
+Every push to GitHub runs `.github/workflows/ci.yml`, which has two jobs:
+
+- **CI (`test`)** — spins up a clean Linux machine, installs Python 3.12 and the
+  dependencies, and runs the pytest suite (`tests/test_transform.py`). If any
+  test fails, the workflow goes red and the deploy is skipped.
+- **CD (`deploy`)** — only runs on `main` **after** the tests pass. It builds the
+  pipeline into a Docker image (see `Dockerfile`) and publishes it to the GitHub
+  Container Registry, so there's always a tested, runnable, deployable artifact.
+
+```
+push -> [ test: pytest ] --pass--> [ deploy: build & push Docker image ]
+                          --fail--> stop (deploy never runs)
+```
+
+Run the tests locally with:
+
+```bash
+pytest -v
+```
+
+### Docker image
+
+The published image bundles the code and its dependencies so the pipeline runs
+identically anywhere:
+
+```bash
+docker pull ghcr.io/navik12/retail-sales-etl-elt-pipeline:latest
+docker run --rm ghcr.io/navik12/retail-sales-etl-elt-pipeline:latest
+```
+
+(The container still needs a database to connect to via environment variables —
+the image just packages the code and dependencies.)
